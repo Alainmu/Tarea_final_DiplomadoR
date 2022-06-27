@@ -1,0 +1,327 @@
+---
+title: "Tarea final Diplomado"
+author: "Alain Muñoz Faúndez"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  slidy_presentation: default
+  ioslides_presentation: default
+  beamer_presentation:
+    theme: Warsaw
+    colortheme: lily
+    fonttheme: professionalfonts
+    includes:
+      in_header: mystyle.tex
+  urlcolor: blue
+subtitle: Diplomado en Análisis de datos con R para la Acuicultura.
+institute: Pontificia Universidad Católica de Valparaíso
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(gapminder)
+library(ggplot2)
+library(psych)
+library(readxl)
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(gganimate)
+library(gifski)
+library(tidyverse)
+library(ineq)
+library(gganimate)
+library(gameofthrones)
+library(png)
+library(grid)
+library(ggridges)
+library(Amelia) 
+library(rapportools)
+library(highcharter)
+library(ULPGCmisc)
+
+```
+
+## INTRODUCCIÓN
+
+Hoy en día es muy común que en un una concesión de acuicultura se siembren  salmonideos provenientes de distintas pisciculturas, lo cual nos entrega durante el ciclo productivo distintos desempeños cuantificables, mas aún cuando hay diferencias en técnicas propias de las instalaciones de origen. En particular, el caso de estudio, se desarrolla en un centro de cultivo de salmones (Salmo salar) ubicado en la región de Aysén, cercano a la localidad de Melinka, ciclo de 54 semanas de duración, distribuidos en 10 jaulas de 40x40 [m], con iguales condiciones para las 10 jaulas. Tomaremos datos de peso promedio final, conversión, mortalidad y velocidad de crecimiento en gramos por semana.
+
+```{r ,echo=FALSE, out.width = '70%', fig.align='center'}
+
+img <- readPNG("/cloud/project/foto.png")
+ grid.raster(img)
+```
+
+
+## Estructura y resumen de los datos.
+
+
+Trabajaremos con 5 bases de datos asociadas al ciclo productivo en estudio.
+
+```{r distribución observaciones, echo=FALSE, out.width = '70%', fig.align='center'}
+datos <- read_excel("/cloud/project/jaula.xlsx") 
+all <- read_excel("/cloud/project/jaulas.xlsx")
+velocidades <- read_excel("/cloud/project/velocidades.xlsx")
+grupos <- read_excel("/cloud/project/grupos.xlsx")
+datos2 <- read_excel("/cloud/project/muestreos.xlsx") 
+
+head(datos)
+head(all)
+head(velocidades)
+head(grupos)
+head(datos2)
+
+
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+```
+
+
+# Datos balanceados, para la totalidad de observaciones hay un numero similar de unidades,sin presencia de observaciones NA.
+
+
+```{r freq, echo=FALSE, out.width = '70%', fig.align='center'}
+pie(table(datos$grupo), col=c("lightblue","pink"),
+    main="Estudio datos, distribución por grupo.")
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+```
+
+
+## GRAFICAS EXPLORATORIAS.
+
+
+La distribución de pesos promedios tiene una alta aglomeración en el rango < a 200 [gr], lo cual nos da un indicio de que el grupo conformado por peces provenientes de piscicultura de recirculación SEALAND, posee un peso menor al de los peces flujo abierto SISA.
+```{r histogramas, echo=FALSE, out.width = '70%', fig.align='center'}
+
+#histograma con mas datos de ejes y mas cadenas de comandos#
+#histograma para pprom#
+all <- read_excel("/cloud/project/jaulas.xlsx")
+hchart(density(all$pprom), type = "area", color = "#B71C1C", name = "Peso") %>% hc_add_theme(hc_theme_elementary())
+
+
+
+ggplot(datos2, aes(x = peso, y = jaula, fill = stat(x))) +
+  geom_density_ridges_gradient() +
+  scale_fill_viridis_c(name = "peso", option = "C")
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+
+También, podemos comprobar la limpieza de los datos, buscando datos perdidos mediante un mapeo  de los datos.
+Esta última ténica nos arroja una nube limpia, con datos duros y sin presencia de NA.
+
+```{r mapdata, echo=FALSE, out.width = '70%', fig.align='center'}
+
+missmap(datos2,col=c('blue','black'),y.at=1,y.labels='',legend=TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+```
+
+
+## PIMERA APRECIACIÓN
+
+
+La distribucion de frecuencias de mortalidad, también nos indica que los peces muertos con mayor frecuencia, pertenecen al grupo < a 2000 [gr]
+
+```{r histogramas2, echo=FALSE, out.width = '70%', fig.align='center'}
+
+#histograma para znum#
+hist(x = datos$znum, main = "Histograma de numero de mortalidad", 
+     xlab = "N mortalidad", ylab = "Frecuencia",
+     col = "grey")
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+```
+
+
+## PRUEBAS DE HOMOCEDASTICIDAD
+
+
+Realizaremos pruebas de homocedasticidad e independencia de los datos a trabajar.
+
+```{r pruebas homocedasticidad, echo=FALSE, out.width = '70%', fig.align='center'}
+par(mfrow=c(2, 3)) 
+plot(density(datos$pprom))
+plot(density(datos$znum))
+plot(density(datos$fcr))
+
+plot(ecdf(datos$pprom))
+plot(ecdf(datos$znum))
+plot(ecdf(datos$fcr))
+
+##inndependencia y variacion entre los datos
+
+ggplot(datos, aes(x=grupo, y=pprom, fill = grupo)) +
+  geom_boxplot()
+
+
+ggplot(datos, aes(x=grupo, y=pprom, fill = grupo)) +
+  labs(y = "Peso promedio (g")+
+  geom_boxplot() + 
+  geom_jitter()
+
+#interaccion entre los datos##
+interaction.plot(datos$grupo, datos$pprom, datos$fcr)
+
+
+
+corPlot(datos[,4:6], cex = 1.9, main = "Matriz de correlación")
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+```
+
+
+## SUPUESTOS PREVIOS
+
+
+Las pruebas de interacción y correlación, no son determinantes como para decidir la diferencia entre los grupos de peces de pisciculturas de recirculación (RAS) y flujo abierto (FA). Por lo tanto, previo a un análisis de hipótesis, realizaremos una exploración visual del comportamiento del centro en cuestión.
+
+```{r evolucion en mov, echo=FALSE, out.width = '70%', fig.align='center'}
+grafico <- datos %>%
+  ggplot() + 
+  geom_point(aes(x = pprom, y = fcr, col = grupo, size = znum), alpha = 0.8) + theme_classic() + 
+  theme(legend.position = "bottom") + guides(size = "none") + 
+  labs(x = "Peso Promedio [gr]" ,y = "FCR",  col = "") 
+
+grafico +
+  transition_time(sem)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+
+## Otra visión, nos la puede entregar la velocidad de crecimiento por semana, es decir, expresar una tasa de cambio para cada grupo en [gr/sem]. Ésto queda evidenciado al observar ambos grupos durante las 54 semanas de cultivo.
+```{r velocidad sisa, echo=FALSE, out.width = '70%', fig.align='center'}
+velocidades <- read_excel("/cloud/project/velocidades.xlsx")
+
+head(velocidades)
+
+#velocidad crecimiento SISA
+
+velocidades %>%
+  filter(grupo == "SISA") %>%
+  ggplot(aes(sem, grporsem)) + geom_point() + geom_line() + 
+  geom_text(aes(x = min(sem), y = min(grporsem), label = as.factor(sem)) , hjust=-2, vjust = -0.2, alpha = 0.5,  col = "gray", size = 20) +
+  theme_minimal() +
+  transition_reveal(sem) + 
+  ggtitle("Velocidad crecimiento",
+          subtitle = "SISA")+
+  
+  view_follow()
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+```{r velocidad sealand, echo=FALSE, out.width = '70%', fig.align='center'}
+#Velocidad crecimiento SEALAND
+velocidades %>%
+  filter(grupo == "SEALAND") %>%
+  ggplot(aes(sem, grporsem)) + geom_point() + geom_line() + 
+  geom_text(aes(x = min(sem), y = min(grporsem), label = as.factor(sem)) , hjust=-2, vjust = -0.2, alpha = 0.5,  col = "gray", size = 20) +
+  theme_minimal() +
+  transition_reveal(sem) + 
+  ggtitle("Velocidad crecimiento",
+          subtitle = "SEALAND")+
+  
+  view_follow()
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+
+## Ahora bien, si queremos visualizar el desempeño por jaula, en una misma gráfica.
+
+
+```{r crecimientos, echo=FALSE, out.width = '70%', fig.align='center'}
+
+
+
+all <- read_excel("/cloud/project/jaulas.xlsx")
+all%>%
+  ggplot(aes(x = semana, y = pprom, color = jaula))+
+  geom_line( )+
+  geom_point()+
+  xlab("Semana")+
+  ylab("Peso [gr]")+
+  labs(color = "Jaula")+
+  ggtitle("Evoluci?n peso por jaula")+
+  theme_minimal()
+
+#creamos el objeto de ggplot
+
+g1 = all%>%
+  ggplot(aes(x = semana, y = pprom, color = jaula))+
+  geom_line(size = 1)+
+  geom_point(aes(group = seq_along(semana)), size = 2)+
+  
+  #estos son los segmentos que unirás las lineas con los datos
+  geom_segment(aes(xend = 54, yend = pprom, group = jaula),
+               linetype = 2, colour = 'grey') +
+  
+  #Los datos:
+  geom_text(aes(x = 54, label = jaula), hjust = 0)+
+  guides(color = FALSE)+
+  scale_color_got_d(option = "Daenerys")+
+  scale_x_continuous(breaks = seq(1, 54, by = 2),
+                     limits = c(1, 54))+
+  xlab("")+
+  ylab("")+
+  ggtitle("Crecimiento Forsyth 2021",
+          subtitle = "Crecimiento semanal por jaula, 1 - 54")+
+  labs(caption="Alain Munoz ")+
+  theme_minimal()+
+  
+  
+  #aumentando la fuentte para que sea mas amigable en el gif:
+  
+  theme(plot.title = element_text(size = 15),
+        plot.subtitle = element_text(size = 12),
+        axis.text.x = element_text(size = 10),
+        plot.caption = element_text(size = 10, color = "grey40"))+
+
+#animacion
+
+transition_reveal(semana)+
+  coord_cartesian(clip = 'off') +
+  enter_fade() +
+  exit_shrink()
+
+#moviendo el objeto:
+
+animate(g1)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+
+## PRUEBA DE HIPOTESIS
+
+
+En una primera parte, la gráfica de cajas nos indica que las medias poblacionales μ1 y  μ2 de ambos grupos no son iguales ya que no se traslapan.
+En este problema interesa estudiar el siguiente conjunto de hipótesis.
+
+H0:μ1−μ2=0
+H1:μ1−μ2≠0
+
+```{r prueba de hipótesis, echo=FALSE, out.width = '70%', fig.align='center'}
+ggplot(datos, aes(x=grupo, y=pprom, fill = grupo)) +
+  labs(y = "Peso promedio (g")+
+  geom_boxplot() + 
+  geom_jitter()
+#los boxplot no se traslapan, nos da un indicio de que las medias poblacionales son distintas
+
+grupos <- read_excel("/cloud/project/grupos.xlsx")
+as.data.frame(grupos)
+
+
+t.test(x=grupos$ppromss, y=grupos$ppromsl, alternative="two.sided", mu=0, 
+       paired=FALSE, var.equal=FALSE, conf.level=0.95)
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+## CONCLUSIÓN
+
+De la prueba se obtiene un valor-P pequeño, por lo tanto, podemos concluir que si hay diferencias significativas entre la evolución semanal, en peso promedio, entre los grupos SISA y SEALAND.
+Es evidente, ahora apoyado por el resultado del test estadístico, la diferencia entre ambos grupos de peces, presentan una performance muy distinta. Quizas influenciado por patologías acarreadas desde FW y que se acentuaron en SW.
+
