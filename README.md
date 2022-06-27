@@ -2,7 +2,7 @@
 Comparación crecimientos Salmo salar SW pisciculturas RAS y FA
 
 # Autor
-Alain Muñoz.
+Alain Muñoz
 
 # Descripción del problema a resolver
 Determinar diferencias significativas entre dos grupos de peces, misma cepa pero distintas pisciculturas (RAS y FA)..
